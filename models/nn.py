@@ -2,6 +2,7 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.backend as K
 import numpy as np
+from ../utils import compute_error
 
 def build_dense_network(layers, activation = K.tanh, optimizer = keras.optimizers.Adam()):
     """Build a fully connected neural network
@@ -35,12 +36,12 @@ class Reduced_NN:
         
         Arguments:
             dimension {int} -- Dimension of reduced space
-            configurations {dict} -- Configurations of the networks, see `_build_networks` for details
+            configurations {dict} -- Configurations of the networks, see `Reduced_NN._build_networks` for details
         """
         self._dimension = dimension
-        self._build_networks(configurations)
+        self._build_models(configurations)
 
-    def _build_networks(self, configurations):
+    def _build_models(self, configurations):
         """Build networks
         
         Arguments:
@@ -58,22 +59,125 @@ class Reduced_NN:
             configurations = configurations * self._dimension
         self._models = []
         for i in range(self._dimension):
-            layer = configurations[i]["layers"]
+            layers = configurations[i]["layers"]
             activation = configurations[i].get("activation", "tanh")
             optimizer = configurations[i].get("optimizer", "Adam")
             self._models.append(build_dense_network(layers, activation, optimizer))
     
-    def train():
-        pass
+    def train(self, x, y, L = None, **kwargs):
+        """Training models
+        
+        Arguments:
+            x {list(np.ndarray)} -- A list of inputs for each network
+            y {list(np.ndarray)} -- A list of outputs for each network
+            
+        Keyword Arguments:
+            L {int or iterable} -- Sequence numbers of models to be trained (default: {None} -- ALL models)
 
-    def predict():
-        pass
+        Raises:
+            AssertionError -- Length of `L` should be the same with length of `x` and `y`
 
-    def save():
-        pass
+        Notes:
+            Overloaded by each subclass
+        """
+        if L is None:
+            L = range(self._dimension)
+        if type(L) is int:
+            L = [L]
+        if type(x) is np.ndarray:
+            x = [x]
+        if type(y) is np.ndarray:
+            y = [y]
 
-    def load():
-        pass
+        assert(len(L) == len(x) and len(L) == len(y), "The length of `L` should be the same with length of `x` and `y`")
+        for xi, yi, index in zip(x, y, L):
+            self._models[index].fit(xi, yi, **kwargs)
+ 
+    # def _predict_one_model(self, x, *, L = -1, **kwargs):
+    #     """Predict for the L^th model
+        
+    #     Arguments:
+    #         x {np.array} -- Input for the L^th network
+        
+    #     Keyword Arguments:
+    #         L {int} -- The number of model to predict (default: {None: -1})
+        
+    #     Returns:
+    #         Y {np.array} -- The predicted output of the L^th network
+    #     """
+    #     return self._models[L].predict(x, **kwargs)
+
+    def predict(self, x, L = self._dimension, **kwargs):
+        """Predict for the whole model
+        
+        Arguments:
+            x {list(np.ndarray)} -- List of inputs for the models
+        
+        Keyword Arguments:
+            L {int} -- The maximum number of models to predict (default: self._dimension)
+
+        Returns:
+            y {list(np.ndarray)} -- list of corresponding outputs
+
+        Raises:
+            AssertionError -- The length of `x` should be `L`
+
+        Notes:
+            Overloaded by subclasses
+        """
+        if L == 1:
+            x = [x]
+        assert(len(x) == L, "The length of `x` should be `L`")
+        y = []
+        for i in range(L):
+            y.append(self._models[i].predict(x[i], **kwargs))
+        return y
+
+    def evaluate(self, x, y, L = self._dimension, scale = None, **kwargs):
+        """Evaluate the models
+        
+        Arguments:
+            x {list(np.ndarray)} -- The list of inputs for each model
+            y {list(np.ndarray)} -- The list of true outputs for each model
+        
+        Keyword Arguments:
+            L {int} -- The maximum number of models to evaluate (default: {self._dimension})
+            scale {int or np.ndarray} -- The relative scale to compute the errors (default: {None})
+        
+        Returns:
+            errors {list(np.ndarray)} -- The list of errors for each model
+
+        Raises:
+            AssertionError -- The length of `x` and `y` should be `L`
+        """
+        if L == 1:
+            y = [y]
+        assert(len(x) == L and len(y) == L, "The length of `x` and `y` should be `L`")
+        y_pred = self.predict(x, L, **kwargs)
+        errors = []
+        for i in range(L):
+            errors.append(compute_error(y_pred[i], y[i], scale = scale))
+        return errors
+
+    def save(self, path):
+        """Save the models
+        
+        Arguments:
+            path {str} -- The path to the folder
+        """
+        for i in range(self._dimension):
+            self._models[i].save(path + "/{0}_model_{1}.h5".format(self.method, i))
+
+    def load(self, path):
+        for i in range(self._dimension):
+            self._models[i] = keras.models.load_model(path + "/{0}_model_{1}.h5".format(self.method, i))
     
+    @classmethod
+    @property
+    def method(self):
+        return self.__name__
+
+    
+
         
         

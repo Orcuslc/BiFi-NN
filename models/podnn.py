@@ -3,4 +3,5 @@ import tensorflow.keras as keras
 import numpy as np
 from nn import Reduced_NN
 
-class PODNN()
+class PODNN(Reduced_NN):
+    
