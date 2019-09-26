@@ -54,9 +54,9 @@ class Reduced_NN:
         Return:
             self._models {list(keras.models.Model)} -- the models for each reduced network
         """
-        assert(len(configurations) == self._dimension or len(configurations) == 1, "The length of `configurations` should either be 1 or equal to the dimension")
-        if len(configurations) == 1:
-            configurations = configurations * self._dimension
+        assert(len(configurations) == self._dimension or type(configurations) == dict, "`configurations` should either be a single dictionary or a list of dictionaries whose length equals to `self._dimension")
+        if type(configurations) == dict:
+            configurations = [configurations] * self._dimension
         self._models = []
         for i in range(self._dimension):
             layers = configurations[i]["layers"]
@@ -177,6 +177,9 @@ class Reduced_NN:
     def method(self):
         return self.__name__
 
+    @property
+    def models(self):
+        return self._models
     
 
         

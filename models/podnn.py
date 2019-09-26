@@ -4,4 +4,44 @@ import numpy as np
 from nn import Reduced_NN
 
 class PODNN(Reduced_NN):
-    
+    """
+        The class of PODNN model
+    """
+    def __init__(self, *, reduced_dimension, param_dimension, configurations):
+        """init
+        
+        Arguments:
+            reduced_dimension {int} -- The dimension of reduced space
+            param_dimension {int} -- The dimension of parameter space
+            configurations {dict or list(dict)} -- The configuration of neural networks, either a dictionary (in which case the configurations for each neural networks will be the same), or a list of dictionarys, each contain a configurations for the corresponding network
+        """
+        if type(configurations) is dict:
+            configurations = [configurations]*reduced_dimension
+        assert(len(configurations) == reduced_dimension, "`configurations` should either be a single dict or a list of dicts and the length equal to `reduced_dimension`")
+        for i in range(reduced_dimension):
+            configurations["layers"].insert(param_dimension)
+            configurations["layers"].append(i+1)
+        super().__init__(reduced_dimension, configurations)
+
+    def train(self, param, hifi_coefficients, L = None, **kwargs):
+        """Training the neural networks
+        
+        Arguments:
+            param {np.ndarray} -- Training input: parameter
+            hifi_coefficients {np.ndarray} -- Hi-fidelity POD coefficients, of shape [N_sample, N_dimension]
+        
+        Keyword Arguments:
+            L {int or iterable} -- The sequence of models to train (default: {None} -- train all models)
+        """
+        if L is None:
+            L = range(self._dimension)
+        if type(L) is int:
+            L = [L]
+        param = [param]*len(L)
+        x = [param]*len(L)
+        y = [hifi_coefficients[:, :(i+1)] for i in L]
+        for xi, yi, index in zip(x, y, L):
+            self._models[index].fit(xi, yi, **kwargs)
+
+    def predict(self):
+        pass
