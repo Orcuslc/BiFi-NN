@@ -107,14 +107,14 @@ class Reduced_NN:
     #     """
     #     return self._models[L].predict(x, **kwargs)
 
-    def predict(self, x, L = self._dimension, **kwargs):
+    def predict(self, x, Lmax = self._dimension, **kwargs):
         """Predict for the whole model
         
         Arguments:
             x {list(np.ndarray)} -- List of inputs for the models
         
         Keyword Arguments:
-            L {int} -- The maximum number of models to predict (default: self._dimension)
+            Lmax {int} -- The maximum number of models to predict (default: self._dimension)
 
         Returns:
             y {list(np.ndarray)} -- list of corresponding outputs
@@ -125,11 +125,11 @@ class Reduced_NN:
         Notes:
             Overloaded by subclasses
         """
-        if L == 1:
+        if Lmax == 1:
             x = [x]
-        assert(len(x) == L, "The length of `x` should be `L`")
+        assert(len(x) == Lmax, "The length of `x` should be `L`")
         y = []
-        for i in range(L):
+        for i in range(Lmax):
             y.append(self._models[i].predict(x[i], **kwargs))
         return y
 

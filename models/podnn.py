@@ -2,6 +2,7 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import numpy as np
 from nn import Reduced_NN
+from utils import compute_reduced_solution
 
 class PODNN(Reduced_NN):
     """
@@ -43,5 +44,16 @@ class PODNN(Reduced_NN):
         for xi, yi, index in zip(x, y, L):
             self._models[index].fit(xi, yi, **kwargs)
 
-    def predict(self):
-        pass
+    def predict(self, param, Lmax = self._dimension, **kwargs):
+        x = [param]*Lmax
+        return super().predict(x, Lmax, **kwargs)
+
+    def approximate_reduced_solution(self, param, basis):
+        L = basis.shape[0]
+        coefficients = self.predict(param, L)
+        reduced_solution = []
+        for i in range(L):
+            reduced_solution.append(compute_reduced_solution(self.coefficients[i], basis[:i, :]))
+        return reduced_solution
+
+    def evaluate(self, )
