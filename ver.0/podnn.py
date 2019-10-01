@@ -54,11 +54,14 @@ class PODNN:
                 "approx_errors": approx_errors}
 
     @log
-    def load(self):
+    def load(self, path = None):
         self.nns = []
         for i in range(self.Lmax):
             self.nns.append(NN([1, 1, 1], multi_start = self.n_start))
-            self.nns[-1].load()
+            if path is None:
+                self.nns[i].load("{0}/basis_{1}", self.save_path, i)
+            else:
+                self.nns[i].load("{0}/basis_{1}", path, i)
 
 if __name__ == "__main__":
     from preprocessing import prepare_data
