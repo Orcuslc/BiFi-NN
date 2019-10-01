@@ -1,10 +1,12 @@
 import sys
 sys.path.append('../../')
+sys.path.append('../')
 
 import numpy as np
 import os
 from preprocessing import prepare_data
 from podnn import PODNN
+from analysis import read_results, plot_results
 
 H = 16
 N = 400
@@ -15,7 +17,10 @@ train_data, test_data = prepare_data("dataset.mat", L = Lmax, train_index = rang
 # podnn.train(train_data, batch_size = 100, epochs = 10000, verbose = 1)
 
 res = podnn.load_and_test(test_data)
-print(res)
+# print(res)
 os.makedirs("results/podnn", exist_ok=True)
 np.save("results/podnn/N_{0}_H_{1}.npy".format(N, H), res)
 print("ALL Finished")
+
+res = read_results("results/podnn/N_{0}_H_{1}.npy".format(N, H))
+plot_results(res)
