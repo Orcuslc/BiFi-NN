@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.io as sio
+import time
 
 def read_mat(path):
     """Read MAT files

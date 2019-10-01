@@ -1,23 +1,26 @@
-from nn import NN
+from nn import NN, _build_logger, log
 import os
 from utils import compute_error
 from pod import compute_reduced_solution
+from functools import wraps, partial
 
 class PODNN:
-    def __init__(self, z_shape, Lmax, layers, n_start = 10, save_path = "models/podnn"):
+    def __init__(self, z_shape, Lmax, layers, n_start = 10, save_path = "models/podnn", logfile = "podnn.log"):
         assert Lmax == len(layers), "Length of layers must equal to Lmax"
         self.Lmax = Lmax
         self.n_start = n_start
         self.save_path = save_path
+        self._logger = _build_logger(logfile)
         os.makedirs(self.save_path, exist_ok = True)
         self._build_models(z_shape, layers)
 
+    @log 
     def _build_models(self, z_shape, layers):
         self.nns = []
         for i in range(self.Lmax):
             self.nns.append(NN([z_shape] + layers[i] + [i+1], multi_start = self.n_start))
-        print("Build NNs finished")
     
+    @log
     def train(self, train_data, *, batch_size, epochs, **kwargs):
         for i in range(self.Lmax):
             print("Training NN for Basis {0}".format(i+1))
@@ -29,6 +32,7 @@ class PODNN:
             self.nns[i].save("{0}/basis_{1}".format(self.save_path, i))
         print("Training finished")
 
+    @log
     def test(self, test_data):
         V_high = test_data["V_high"]
         u_high = test_data["u_high"]
@@ -49,6 +53,7 @@ class PODNN:
                 "coeff_errors": coeff_errors,
                 "approx_errors": approx_errors}
 
+    @log
     def load(self):
         self.nns = []
         for i in range(self.Lmax):

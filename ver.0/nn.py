@@ -4,17 +4,19 @@ from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Activation, BatchNormalization
 from tensorflow.keras.losses import MSE
 import tensorflow.keras.backend as K
+from functools import wraps
 import numpy as np
 import os
+import logging
+import time
 # from scipy.optimize import fmin_l_bfgs_b
 
 class NN:
 	"""
 	Base class for PODNN and BiFiNN, with input and output fixed
 	"""
-	def __init__(self, layers, multi_start = 10, logfile = "log.txt"):
+	def __init__(self, layers, multi_start = 10):
 		self.multi_start = multi_start
-                self.log = logfile
 		self.models = []
 		for _ in range(self.multi_start):
 			self.models.append(self._build_model(layers))
@@ -37,7 +39,6 @@ class NN:
 			val_losses.append(min(hist.history["val_loss"]))
 		self.best_index = val_losses.index(min(val_losses))
 		self.best_model = self.models[self.best_index]
-		print("Best model: Model {0}".format(self.best_index))
 
 	def save(self, path):
 		os.makedirs(path, exist_ok = True)
@@ -54,6 +55,55 @@ class NN:
 			if file.startswith("best"):
 				self.best_model = load_model("{0}/{1}".format(path, file))
 				break
+
+def _build_logger(logfile):
+	logger = logging.getLogger(__name__)
+	logger.setLevel(logging.INFO)
+	handler = logging.FileHandler(logfile)
+	handler.setLevel(logging.INFO)
+	formatter = logging.Formatter('[%(asctime)s]-[%(name)s]-[%(levelname)s]  %(message)s')
+	handler.setFormatter(formatter)
+	logger.addHandler(handler)
+	return logger
+
+def log(func):
+	@wraps(func)
+	def wrapper(self, *args, **kwargs):
+		self._logger.info("start executing: {0}".format(func.__name__))
+		start = time.time()
+		res = func(self, *args, **kwargs)
+		end = time.time()
+		self._logger.info("finished executing: {0}, time span: {1}".format(func.__name__, end - start))
+		return res
+	return wrapper
+
+# class Logger:
+# 	def __init__(self, logfile):
+# 		self._build_logger(logfile)		
+
+# 	def _build_logger(self, logfile):
+# 		logger = logging.getLogger(__name__)
+# 		logger.setLevel(logging.INFO)
+# 		handler = logging.FileHandler(logfile)
+# 		handler.setLevel(logging.INFO)
+# 		formatter = logging.Formatter('[%(asctime)s]-[%(name)s]-[%(levelname)s]  %(message)s')
+# 		handler.setFormatter(formatter)
+# 		logger.addHandler(handler)
+# 		self._logger = logger
+
+# 	def log(self):
+# 		def decorate(func):
+# 			@wraps(func)
+# 			def wrapper(*args, **kwargs):
+# 				self._logger.info("start executing: {0}".format(func.__name__))
+# 				start = time.time()
+# 				res = func(*args, **kwargs)
+# 				end = time.time()
+# 				self._logger.info("finished executing: {0}, time span: {1}".format(func.__name__, end - start))
+# 				return res
+# 			return wrapper
+# 		return decorate
+
 
 	# def loss(c_true, c_pred):
 	# 	self.loss = MSE(c_true, c_pred)
