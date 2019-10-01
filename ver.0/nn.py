@@ -50,6 +50,9 @@ class NN:
 		self.models = []
 		for i in range(self.multi_start):
 			self.models.append(load_model("{0}/{1}.h5".format(path, i)))
+		self.load_best(path)
+
+	def load_best(self, path):
 		files = os.listdir(path)
 		for file in files:
 			if file.startswith("best"):
