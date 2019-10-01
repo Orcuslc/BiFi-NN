@@ -12,8 +12,9 @@ class NN:
 	"""
 	Base class for PODNN and BiFiNN, with input and output fixed
 	"""
-	def __init__(self, layers, multi_start = 10):
+	def __init__(self, layers, multi_start = 10, logfile = "log.txt"):
 		self.multi_start = multi_start
+                self.log = logfile
 		self.models = []
 		for _ in range(self.multi_start):
 			self.models.append(self._build_model(layers))
@@ -39,7 +40,7 @@ class NN:
 		print("Best model: Model {0}".format(self.best_index))
 
 	def save(self, path):
-		os.makedirs(path, exist_ok = True)	
+		os.makedirs(path, exist_ok = True)
 		for (i, model) in zip(range(self.multi_start), self.models):
 			model.save("{0}/{1}.h5".format(path, i))
 		self.best_model.save("{0}/best_{1}.h5".format(path, self.best_index))
