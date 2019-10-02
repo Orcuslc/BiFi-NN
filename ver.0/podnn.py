@@ -10,39 +10,43 @@ import time
 class PODNN:
 	def __init__(self, z_shape, Lmax, layers, n_start = 10, save_path = "models/podnn", status = "train", logfile = "podnn.log"):
 		assert Lmax == len(layers), "Length of layers must equal to Lmax"
+		self.z_shape = z_shape
 		self.Lmax = Lmax
+		self.layers = layers
 		self.n_start = n_start
 		self.save_path = save_path
 		self._logger = _build_logger(logfile)
 		os.makedirs(self.save_path, exist_ok = True)
-		if status == "train":
-			self._build_models(z_shape, layers)
+		# if status == "train":
+		# 	self._build_models(z_shape, layers)
 		self.best_models = []
 
-	@log 
-	def _build_models(self, z_shape, layers):
-		self.nns = []
-		for i in range(self.Lmax):
-			self.nns.append(NN([z_shape] + layers[i] + [i+1], multi_start = self.n_start))
+	# @log 
+	# def _build_models(self, z_shape, layers):
+	# 	self.nns = []
+	# 	for i in range(self.Lmax):
+	# 		self.nns.append(NN([z_shape] + layers[i] + [i+1], multi_start = self.n_start))
 	
 	@log
 	def train(self, train_data, *, batch_size, epochs, **kwargs):
 		for i in range(self.Lmax):
 			self._logger.info("Training NN for Basis {0}".format(i+1))
 			start = time.time()
-			self.nns[i].train(x = train_data["z"], 
+			nn = NN([self.z_shape] + self.layers[i] + [i+1], multi_start = self.n_start)
+			nn.train(x = train_data["z"], 
 							y = train_data["c_high"][:, :(i+1)],
 							batch_size = batch_size,
 							epochs = epochs,
 							**kwargs)
 			end = time.time()
 			self._logger.info("Finished training, time span: {0}".format(end - start))
-			self.best_models.append(self.nns[i].best_model)
+			# self.best_models.append(self.nns[i].best_model)
 			self._logger.info("Saving NN for Basis {0}".format(i+1))
 			start = time.time()
-			self.nns[i].save("{0}/basis_{1}".format(self.save_path, i+1))
+			nn.save("{0}/basis_{1}".format(self.save_path, i+1))
 			end = time.time()
 			self._logger.info("Finished saving, time span: {0}".format(end - start))
+			K.clear_session()
 
 	@log
 	def predict(self, predict_data):
