@@ -3,7 +3,7 @@ import os
 from utils import compute_error
 from pod import compute_reduced_solution
 from functools import wraps, partial
-from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model, model_from_json
 import tensorflow.keras.backend as K
 import time
 
@@ -99,8 +99,14 @@ class PODNN:
 			path = self.save_path
 		files = os.listdir("{0}/basis_{1}".format(path, L))
 		for file in files:
-			if file.startswith("best"):
-				return load_model("{0}/basis_{1}/{2}".format(path, L, file))
+			if file.startswith("best_model"):
+				with open("{0}/basis_{1}/{2}".format(path, L, file), "r") as f:
+					model_json = f.read()
+				model = model_from_json(model_json)
+		for file in files:
+			if file.startswith("best_weights"):
+				model.load_weights("{0}/basis_{1}/{2}".format(path, L, file))
+		return model
 
 	@log
 	def load_best(self, path = None):

@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorflow.keras as keras
-from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.models import Sequential, load_model, model_from_json
 from tensorflow.keras.layers import Dense, Activation, BatchNormalization
 from tensorflow.keras.losses import MSE
 import tensorflow.keras.backend as K
@@ -43,21 +43,35 @@ class NN:
 	def save(self, path):
 		os.makedirs(path, exist_ok = True)
 		for (i, model) in zip(range(self.multi_start), self.models):
-			model.save("{0}/{1}.h5".format(path, i))
-		self.best_model.save("{0}/best_{1}.h5".format(path, self.best_index))
+			model.save_weights("{0}/weights_{1}.h5".format(path, i))
+			model_json = model.to_json()
+			with open("{0}/model_{1}.json".format(path, i), "w") as f:
+				f.write(model_json)
+		self.best_model.save_weights("{0}/best_weights_{1}.h5".format(path, self.best_index))
+		best_model_json = self.best_model.to_json()
+		with open("{0}/best_model_{1}.json".format(path, self.best_index), "w") as f:
+			f.write(best_model_json)
 
 	def load(self, path):
 		self.models = []
 		for i in range(self.multi_start):
-			self.models.append(load_model("{0}/{1}.h5".format(path, i)))
+			with open("{0}/model_{1}.json".format(path, i), "r") as f:
+				model_json = f.read()
+			model = model_from_json(model_json)
+			model.load_weights("{0}/weights_{1}.h5".format(path, i))
+			self.models.append(model)
 		self.load_best(path)
 
 	def load_best(self, path):
 		files = os.listdir(path)
 		for file in files:
-			if file.startswith("best"):
-				self.best_model = load_model("{0}/{1}".format(path, file))
-				break
+			if file.startswith("best_model"):
+				with open("{0}/{1}".format(path, file), "r") as f:
+					model_json = f.read()
+				self.best_model = model_from_json(model_json)
+		for file in files:
+			if file.startswith("best_weights"):
+				self.best_model.load_weights("{0}/{1}".format(path, file))
 
 def _build_logger(logfile):
 	logger = logging.getLogger(__name__)
