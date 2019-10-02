@@ -12,6 +12,10 @@ class BiFiNN(PODNN):
 	def __init__(self, z_shape, Lmax, layers, n_start = 10, save_path = "models/podnn", status = "train", logfile = "bifinn.log"):
 		z_shape += Lmax
 		super().__init__(z_shape, Lmax, layers, n_start, save_path, status, logfile)
+
+	def train_and_store(self, train_data, *, batch_size, epochs, **kwargs):
+		train_data["z"] = np.concatenate([train_data["z"], train_data["c_low"]], axis = 1)
+		return super().train_and_store(train_data, batch_size, epochs, **kwargs)
 	
 	def train(self, train_data, *, batch_size, epochs, **kwargs):
 		train_data["z"] = np.concatenate([train_data["z"], train_data["c_low"]], axis = 1)
