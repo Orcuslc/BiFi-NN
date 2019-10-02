@@ -5,6 +5,7 @@ from pod import compute_reduced_solution
 from functools import wraps, partial
 from tensorflow.keras.models import load_model
 import tensorflow.keras.backend as K
+import time
 
 class PODNN:
 	def __init__(self, z_shape, Lmax, layers, n_start = 10, save_path = "models/podnn", status = "train", logfile = "podnn.log"):
@@ -27,15 +28,21 @@ class PODNN:
 	@log
 	def train(self, train_data, *, batch_size, epochs, **kwargs):
 		for i in range(self.Lmax):
-			print("Training NN for Basis {0}".format(i+1))
+			self._logger.info("Training NN for Basis {0}".format(i+1))
+			start = time.time()
 			self.nns[i].train(x = train_data["z"], 
 							y = train_data["c_high"][:, :(i+1)],
 							batch_size = batch_size,
 							epochs = epochs,
 							**kwargs)
+			end = time.time()
+			self._logger.info("Finished training, time span: {0}".format(end - start))
 			self.best_models.append(self.nns[i].best_model)
-			self.nns[i].save("{0}/basis_{1}".format(self.save_path, i))
-		print("Training finished")
+			self._logger.info("Saving NN for Basis {0}".format(i+1))
+			start = time.time()
+			self.nns[i].save("{0}/basis_{1}".format(self.save_path, i+1))
+			end = time.time()
+			self._logger.info("Finished saving, time span: {0}".format(end - start))
 
 	@log
 	def predict(self, predict_data):
@@ -76,14 +83,13 @@ class PODNN:
 		nn.load("{0}/basis_{1}".format(path, L))
 		return nn
 
-
 	@log
 	def load_all(self, path = None):
 		"""Not Recommended
 		"""
 		self.nns = []
 		self.best_models = []
-		for i in range(self.Lmax):
+		for i in range(1, self.Lmax+1):
 			self.nns.append(self.load_one_all(i, path))
 			self.best_models.append(self.nns[-1].best_model)
 
@@ -101,7 +107,7 @@ class PODNN:
 		"""Still Not Recommended
 		"""
 		self.best_models = []
-		for i in range(self.Lmax):
+		for i in range(1, self.Lmax+1):
 			self.best_models.append(self.load_one_best(i, path))
 
 	@log
@@ -111,11 +117,11 @@ class PODNN:
 		V_high = predict_data["V_high"]
 		c_pred = []
 		u_pred = []
-		for i in range(self.Lmax):
+		for i in range(1, self.Lmax+1):
 			model = self.load_one_best(i, path)
 			c = model.predict(predict_data["z"])
 			K.clear_session() # to speedup loading 
-			u = compute_reduced_solution(c, V_high[:(i+1), :])
+			u = compute_reduced_solution(c, V_high[:i, :])
 			c_pred.append(c)
 			u_pred.append(u)
 		return {"c": c_pred,

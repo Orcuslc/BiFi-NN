@@ -13,12 +13,10 @@ class BiFiNN(PODNN):
 		z_shape += Lmax
 		super().__init__(z_shape, Lmax, layers, n_start, save_path, status, logfile)
 	
-	@log
 	def train(self, train_data, *, batch_size, epochs, **kwargs):
 		train_data["z"] = np.concatenate([train_data["z"], train_data["c_low"]], axis = 1)
 		super().train(train_data, batch_size = batch_size, epochs = epochs, **kwargs)
 	
-	@log
 	def predict(self, predict_data):
 		predict_data["z"] = np.concatenate([predict_data["z"], predict_data["c_low"]], axis = 1)
 		return super().predict(predict_data)
@@ -40,16 +38,13 @@ class BiFiNN(PODNN):
 				"u": u_pred,
 				"coeff_errors": coeff_errors,
 				"approx_errors": approx_errors}
-		return PODNN.test(self, test_data)
 
-	@log
 	def load_and_predict(self, predict_data, path=None):
 		predict_data["z"] = np.concatenate([predict_data["z"], predict_data["c_low"]], axis = 1)
 		return super().load_and_predict(predict_data, path=path)
 	
-	@log
 	def load_and_test(self, test_data, path=None):
-		pred = self.load_and_test(test_data, path)
+		pred = self.load_and_predict(test_data, path)
 		c_pred = pred["c"]
 		u_pred = pred["u"]
 		V_high = test_data["V_high"]
