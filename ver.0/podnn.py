@@ -6,6 +6,7 @@ from functools import wraps, partial
 from tensorflow.keras.models import load_model, model_from_json
 import tensorflow.keras.backend as K
 import time
+import numpy as np
 
 class PODNN:
 	def __init__(self, z_shape, Lmax, layers, n_start = 10, save_path = "models/podnn", status = "train", logfile = "podnn.log"):
@@ -33,8 +34,7 @@ class PODNN:
 		for i in range(self.Lmax):
 			self._logger.info("Training NN for Basis {0}".format(i+1))
 			start = time.time()
-			nn = NN([self.z_shape] + self.layers[i] + [i+1], multi_start = self.n_start)
-			nn.train(x = train_data["z"], 
+			self.nns[i].train(x = train_data["z"], 
 							y = train_data["c_high"][:, :(i+1)],
 							batch_size = batch_size,
 							epochs = epochs,
@@ -44,10 +44,9 @@ class PODNN:
 			self.best_models.append(self.nns[i].best_model)
 			self._logger.info("Saving NN for Basis {0}".format(i+1))
 			start = time.time()
-			nn.save("{0}/basis_{1}".format(self.save_path, i+1))
+			self.nns[i].save("{0}/basis_{1}".format(self.save_path, i+1))
 			end = time.time()
 			self._logger.info("Finished saving, time span: {0}".format(end - start))
-			self.nns.append(nn)	
 
 		
 	@log
@@ -63,7 +62,6 @@ class PODNN:
 							**kwargs)
 			end = time.time()
 			self._logger.info("Finished training, time span: {0}".format(end - start))
-			# self.best_models.append(self.nns[i].best_model)
 			self._logger.info("Saving NN for Basis {0}".format(i+1))
 			start = time.time()
 			nn.save("{0}/basis_{1}".format(self.save_path, i+1))
@@ -177,11 +175,102 @@ class PODNN:
 				"u": u_pred,
 				"coeff_errors": coeff_errors,
 				"approx_errors": approx_errors}
-		
+
+class Modified_PODNN(PODNN):
+
+	@log
+	def _build_models(self, z_shape, layers):
+		self.nns = []
+		for i in range(self.Lmax):
+			self.nns.append(NN([z_shape] + layers[i] + [1], multi_start = self.n_start))
+
+	@log
+	def train_and_store(self, train_data, *, batch_size, epochs, **kwargs):
+		"""Not Recommended
+		"""
+		self._build_models(self.z_shape, self.layers)
+		for i in range(self.Lmax):
+			self._logger.info("Training NN for Basis {0}".format(i+1))
+			start = time.time()
+			self.nns[i].train(x = train_data["z"], 
+							y = train_data["c_high"][:, i],
+							batch_size = batch_size,
+							epochs = epochs,
+							**kwargs)
+			end = time.time()
+			self._logger.info("Finished training, time span: {0}".format(end - start))
+			self.best_models.append(self.nns[i].best_model)
+			self._logger.info("Saving NN for Basis {0}".format(i+1))
+			start = time.time()
+			self.nns[i].save("{0}/basis_{1}".format(self.save_path, i+1))
+			end = time.time()
+			self._logger.info("Finished saving, time span: {0}".format(end - start))
+	
+	@log
+	def train(self, train_data, *, batch_size, epochs, **kwargs):
+		for i in range(self.Lmax):
+			self._logger.info("Training NN for Basis {0}".format(i+1))
+			start = time.time()
+			nn = NN([self.z_shape] + self.layers[i] + [1], multi_start = self.n_start)
+			nn.train(x = train_data["z"], 
+							y = train_data["c_high"][:, i],
+							batch_size = batch_size,
+							epochs = epochs,
+							**kwargs)
+			end = time.time()
+			self._logger.info("Finished training, time span: {0}".format(end - start))
+			self._logger.info("Saving NN for Basis {0}".format(i+1))
+			start = time.time()
+			nn.save("{0}/basis_{1}".format(self.save_path, i+1))
+			end = time.time()
+			self._logger.info("Finished saving, time span: {0}".format(end - start))
+			K.clear_session()
+
+	@log
+	def predict(self, predict_data):
+		V_high = predict_data["V_high"]
+		c_pred = []
+		u_pred = []
+		for i in range(self.Lmax):
+			c = self.best_models[i].predict
+			(predict_data["z"])
+			c_pred.append(c)
+			u = compute_reduced_solution(np.concatenate(c_pred, axis = 1), V_high[:(i+1), :])
+			u_pred.append(u)
+		return {"c": c_pred,
+				"u": u_pred}
+
+	@log
+	def load_and_predict(self, predict_data, path=None):
+		"""Recommended
+		"""
+		V_high = predict_data["V_high"]
+		c_pred = []
+		u_pred = []
+		for i in range(1, self.Lmax+1):
+			model = self.load_one_best(i, path)
+			c = model.predict(predict_data["z"])
+			K.clear_session()
+			c_pred.append(c)
+			u = compute_reduced_solution(np.concatenate(c_pred, axis = 1), V_high[:i, :])
+			u_pred.append(u)
+		return {"c": c_pred,
+				"u": u_pred}
+
 
 if __name__ == "__main__":
 	from preprocessing import prepare_data
-	podnn = PODNN(z_shape = 10, Lmax = 2, layers = [[16, 16] for i in range(2)], n_start = 1)
-	train_data, test_data = prepare_data("examples/example4/dataset.mat", L = 2, train_index = range(500), test_index = range(500, 600), basis_index = range(600, 880))
-	podnn.train(train_data, batch_size = 100, epochs = 10, verbose = 0)
-	print(podnn.test(test_data))
+	podnn = Modified_PODNN(z_shape = 10, 
+				Lmax = 2, 
+				layers = [[16, 16] for i in range(2)], 
+				n_start = 1)
+	train_data, test_data = prepare_data("examples/example4/dataset.mat", 
+				L = 2, 
+				train_index = range(500), 
+				test_index = range(500, 600), 
+				basis_index = range(600, 880))
+	podnn.train(train_data, 
+				batch_size = 100, 
+				epochs = 10, 
+				verbose = 0)
+	print(podnn.load_and_test(test_data))
