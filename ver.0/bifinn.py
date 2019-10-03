@@ -7,6 +7,7 @@ from functools import wraps, partial
 from tensorflow.keras.models import load_model
 import tensorflow.keras.backend as K
 import numpy as np
+import copy
 
 class BiFiNN(PODNN):
 	def __init__(self, z_shape, Lmax, layers, n_start = 10, save_path = "models/bifinn", status = "train", logfile = "bifinn.log"):
@@ -14,15 +15,15 @@ class BiFiNN(PODNN):
 		super().__init__(z_shape, Lmax, layers, n_start, save_path, status, logfile)
 
 	def train_and_store(self, train_data, *, batch_size, epochs, **kwargs):
-		train_data["z"] = np.concatenate([train_data["z"], train_data["c_low"]], axis = 1)
+		train_data = self.extend_data(train_data)
 		return super().train_and_store(train_data, batch_size = batch_size, epochs = epochs, **kwargs)
 	
 	def train(self, train_data, *, batch_size, epochs, **kwargs):
-		train_data["z"] = np.concatenate([train_data["z"], train_data["c_low"]], axis = 1)
+		train_data = self.extend_data(train_data)
 		super().train(train_data, batch_size = batch_size, epochs = epochs, **kwargs)
 	
 	def predict(self, predict_data):
-		predict_data["z"] = np.concatenate([predict_data["z"], predict_data["c_low"]], axis = 1)
+		predict_data = self.extend_data(predict_data)
 		return super().predict(predict_data)
 
 	@log
@@ -44,7 +45,7 @@ class BiFiNN(PODNN):
 				"approx_errors": approx_errors}
 
 	def load_and_predict(self, predict_data, path=None):
-		predict_data["z"] = np.concatenate([predict_data["z"], predict_data["c_low"]], axis = 1)
+		predict_data = self.extend_data(predict_data)
 		return super().load_and_predict(predict_data, path=path)
 	
 	@log
@@ -65,6 +66,11 @@ class BiFiNN(PODNN):
 				"coeff_errors": coeff_errors,
 				"approx_errors": approx_errors}
 
+	def extend_data(self, data):
+		new_data = copy.deepcopy(data)
+		new_data["z"] = np.concatenate([data["z"], data["c_low"]], axis = 1)
+		return new_data
+
 
 class Modified_BiFiNN(Modified_PODNN):
 	def __init__(self, z_shape, Lmax, layers, n_start = 10, save_path = "models/mbifinn", status = "train", logfile = "mbifinn.log"):
@@ -72,14 +78,15 @@ class Modified_BiFiNN(Modified_PODNN):
 		super().__init__(z_shape, Lmax, layers, n_start, save_path, status, logfile)
 
 	def train_and_store(self, train_data, *, batch_size, epochs, **kwargs):
-		train_data["z"] = np.concatenate([train_data["z"], train_data["c_low"]], axis = 1)
+		train_data = self.extend_data(train_data)
 		return super().train_and_store(train_data, batch_size = batch_size, epochs = epochs, **kwargs)
 
 	def train(self, train_data, *, batch_size, epochs, **kwargs):
+		train_data = self.extend_data(train_data)
 		super().train(train_data, batch_size = batch_size, epochs = epochs, **kwargs)
 
 	def predict(self, predict_data):
-		predict_data["z"] = np.concatenate([predict_data["z"], predict_data["c_low"]], axis = 1)
+		predict_data = self.extend_data(predict_data)
 		return super().predict(predict_data)
 
 	@log
@@ -101,7 +108,7 @@ class Modified_BiFiNN(Modified_PODNN):
 				"approx_errors": approx_errors}	
 
 	def load_and_predict(self, predict_data, path=None):
-		predict_data["z"] = np.concatenate([predict_data["z"], predict_data["c_low"]], axis = 1)
+		predict_data = self.extend_data(predict_data)
 		return super().load_and_predict(predict_data, path=path)
 
 	def load_and_test(self, test_data, path=None):
@@ -120,6 +127,12 @@ class Modified_BiFiNN(Modified_PODNN):
 				"u": u_pred,
 				"coeff_errors": coeff_errors,
 				"approx_errors": approx_errors}
+
+	def extend_data(self, data):
+		new_data = copy.deepcopy(data)
+		new_data["z"] = np.concatenate([data["z"], data["c_low"]], axis = 1)
+		return new_data
+
 
 if __name__ == "__main__":
 	from preprocessing import prepare_data

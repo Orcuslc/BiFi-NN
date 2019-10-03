@@ -3,7 +3,7 @@ sys.path.append("../")
 
 from handle_results import *
 
-H = 24
+H = 8
 N = 400
 
 podnn_path = "results/podnn/N_{0}_H_{1}.npy".format(N, H)
