@@ -76,7 +76,6 @@ class Modified_BiFiNN(Modified_PODNN):
 		return super().train_and_store(train_data, batch_size = batch_size, epochs = epochs, **kwargs)
 
 	def train(self, train_data, *, batch_size, epochs, **kwargs):
-		train_data["z"] = np.concatenate([train_data["z"], train_data["c_low"]], axis = 1)
 		super().train(train_data, batch_size = batch_size, epochs = epochs, **kwargs)
 
 	def predict(self, predict_data):
