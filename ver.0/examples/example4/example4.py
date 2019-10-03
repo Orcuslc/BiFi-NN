@@ -10,7 +10,8 @@ from bifinn import BiFiNN, Modified_BiFiNN
 from handle_results import read_results, plot_results
 import matplotlib.pyplot as plt
 
-for H in [8, 16, 24, 32]:
+# for H in [8, 16, 24, 32]:
+for H in [16]:
 # H = 24
 	N = 400
 	Lmax = 16

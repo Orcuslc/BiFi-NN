@@ -35,7 +35,15 @@ class NN:
 	def train(self, x, y, batch_size, epochs, **kwargs):
 		val_losses = []
 		for model in self.models:
-			hist = model.fit(x, y, batch_size, epochs, callbacks = [keras.callbacks.EarlyStopping(patience = 100, restore_best_weights = True)], validation_split = 0.2, **kwargs)
+			hist = model.fit(x, y, 
+			batch_size, 
+			epochs, 
+			callbacks = [keras.callbacks.EarlyStopping(patience = 500, 
+										restore_best_weights = True),
+						keras.callbacks.tensorboard_v1.Tensorboard(log_dir = "./tensorboard", 
+										histogram_freq = 50,
+										write_grads = True)],
+			validation_split = 0.2, **kwargs)
 			val_losses.append(min(hist.history["val_loss"]))
 		self.best_index = val_losses.index(min(val_losses))
 		self.best_model = self.models[self.best_index]
